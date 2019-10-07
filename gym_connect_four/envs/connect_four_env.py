@@ -9,6 +9,7 @@ import pygame
 from gym_connect_four.envs.render import render_board
 from gym import error
 
+
 class Player(ABC):
     """ Class used for evaluating the game """
 
@@ -52,7 +53,8 @@ class SavedPlayer(Player):
         state = np.reshape(state, [1] + list(self.observation_space))
         for _ in range(100):
             q_values = self.model.predict(state)
-            q_values = np.array([[x if idx in self.env.available_moves() else -10 for idx, x in enumerate(q_values[0])]])
+            q_values = np.array(
+                [[x if idx in self.env.available_moves() else -10 for idx, x in enumerate(q_values[0])]])
             action = np.argmax(q_values[0])
             if self.env.is_valid_action(action):
                 return action
@@ -88,7 +90,7 @@ class ConnectFourEnv(gym.Env):
         An attempt is made to place a piece in an invalid location
     """
 
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human', 'rgb_array', 'console']}
 
     LOSS_REWARD = -1
     DEF_REWARD = 0
@@ -112,6 +114,7 @@ class ConnectFourEnv(gym.Env):
         self.screen = None
         self.window_width = window_width
         self.window_height = window_height
+
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         state, reward, done, _ = self._step(action)
 
@@ -162,7 +165,7 @@ class ConnectFourEnv(gym.Env):
 
         self.current_player = 1
         self.board = np.zeros(self.board_shape, dtype=int)
-        
+
         self._update_board_render()
         if opponent and self.player_color != self.current_player:
             action_opponent = self.opponent.get_next_action(self.board)
@@ -180,7 +183,7 @@ class ConnectFourEnv(gym.Env):
 
             if close:
                 pygame.quit()
-            
+
             self._update_board_render()
             frame = self.rendered_board
             surface = pygame.surfarray.make_surface(frame)
@@ -188,11 +191,15 @@ class ConnectFourEnv(gym.Env):
             self.screen.blit(surface, (0, 0))
 
             pygame.display.update()
+        elif mode == 'rgb_array':
+            self._update_board_render()
+            return np.flip(self.rendered_board, axis=(0, 1))
         else:
-            raise error.UnsupportedMode() 
+            raise error.UnsupportedMode()
 
     def close(self) -> None:
         pygame.quit()
+        self.screen = None
 
     def is_valid_action(self, action: int) -> bool:
         if self.board[0][action] == 0:
